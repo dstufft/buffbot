@@ -51,9 +51,7 @@ class Worker(QObject):
         paths = self._watcher.directories() + self._watcher.files()
         if paths:
             self._watcher.removePaths(paths)
-
         self._buffbot.close()
-
         self.finished.emit()
 
     def stop(self):
@@ -62,12 +60,20 @@ class Worker(QObject):
     def _do_create_bot(self, filename):
         filename = os.path.abspath(filename)
 
+        # If we have an existing buffbot that is listening to a different
+        # file, then we need to stop watching that file, close out our
+        # existing buffbot, and set it to None so that a new one can be
+        # created later.
         if self._buffbot is not None:
             if not os.path.samefile(filename, self._buffbot.filename):
-                self._watcher.removePath(filename)
+                self._watcher.removePath(self._buffbot.filename)
+                self._watcher.removePath(os.path.dirname(self._buffbot.filename))
                 self._buffbot.close()
                 self._buffbot = None
 
+        # If we don't have a buffbot, either because we're just starting
+        # or because the file has changed, then create a new one and
+        # start watching the file and the directory containing that file.
         if self._buffbot is None:
             self._buffbot = BuffBot(filename=filename)
             self._buffbot.load()
@@ -98,18 +104,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.action_Open.triggered.connect(self.open_file)
 
+        # Spawn our background worker thread and schedule the worker to
+        # start in it once the thread starts, and the thread to quit when
+        # the worker is finished, and finally the entire app to quit wen
+        # the thread exits.
         self.thread = QThread()
         self.worker = Worker()
         self.worker.moveToThread(self.thread)
         self.worker.finished.connect(self.thread.quit)
         self.thread.started.connect(self.worker.start)
+        self.thread.finished.connect(QApplication.instance().exit)
         self.thread.start()
 
     def closeEvent(self, e):
+        # If the thread is running, we'll tell the worker to stop, and rely on
+        # the signals to have first the thread shutdown, and then the entire
+        # application, and since we're relying on the signals to close the
+        # application, we can ignore this event.
+        #
+        # However, if the thread is not running for some reason (this shouldn't)
+        # ever happen, but just in case it does, we'll just process this event as
+        # normal, and let Qt close our application.
         if self.thread.isRunning():
-            self.thread.finished.connect(QApplication.instance().exit)
             self.worker.stop()
-
             e.ignore()
         else:
             e.accept()
