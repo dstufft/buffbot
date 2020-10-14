@@ -52,7 +52,10 @@ class Worker(QObject):
         paths = self._watcher.directories() + self._watcher.files()
         if paths:
             self._watcher.removePaths(paths)
-        self._buffbot.close()
+
+        if self._buffbot is not None:
+            self._buffbot.close()
+
         self.finished.emit()
 
     def stop(self):
