@@ -84,10 +84,6 @@ class Worker(QObject):
         self._filename.emit(filename)
 
     def _process(self, path):
-        # If there's no active BuffBot, then we skip this process
-        if self._buffbot is None:
-            return
-
         self._buffbot.process()
 
 
