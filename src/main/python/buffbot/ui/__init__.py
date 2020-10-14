@@ -7,7 +7,7 @@ from fbs_runtime.application_context.PyQt5 import (
 from PyQt5.QtCore import QFileSystemWatcher, QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow
 
-from buffbot.core import BuffBot
+from buffbot.core import BuffBot, Character
 from buffbot.ui.generated.main_window import Ui_MainWindow
 
 # Configuration
@@ -30,6 +30,7 @@ class ApplicationContext(_ApplicationContext):
 class Worker(QObject):
 
     finished = pyqtSignal()
+    characterDetails = pyqtSignal(Character)
 
     _stopping = pyqtSignal()
     _filename = pyqtSignal(str)
@@ -76,6 +77,7 @@ class Worker(QObject):
         # start watching the file and the directory containing that file.
         if self._buffbot is None:
             self._buffbot = BuffBot(filename=filename)
+            self.characterDetails.emit(self._buffbot.character)
             self._buffbot.load()
             self._watcher.addPath(filename)
             self._watcher.addPath(os.path.dirname(filename))
@@ -104,6 +106,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.action_Open.triggered.connect(self.open_file)
 
+        # Setup our default UI values, we do this here instead of in QT Designer,
+        # because QT Designer has default text that makes it easier to tell what
+        # is happening when laying out the UI, but which isn't the best default
+        # when first opening the application.
+        self.character_name.setText("")
+        self.character_server.setText("")
+
         # Spawn our background worker thread and schedule the worker to
         # start in it once the thread starts, and the thread to quit when
         # the worker is finished, and finally the entire app to quit wen
@@ -114,6 +123,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.worker.finished.connect(self.thread.quit)
         self.thread.started.connect(self.worker.start)
         self.thread.finished.connect(QApplication.instance().exit)
+
+        # Wire the worker up to be able to pass data back into the UI.
+        self.worker.characterDetails.connect(self.update_character)
+
+        # Start our thread so it can start processing information.
         self.thread.start()
 
     def closeEvent(self, e):
@@ -138,3 +152,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if filename:
             self.worker.filename(filename)
+
+    def update_character(self, char):
+        self.character_name.setText(char.name)
+        self.character_server.setText(char.server_display)

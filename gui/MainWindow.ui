@@ -18,30 +18,30 @@
     <item>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <layout class="QFormLayout" name="formLayout">
+       <layout class="QFormLayout" name="character_details">
         <item row="0" column="0">
-         <widget class="QLabel" name="label">
+         <widget class="QLabel" name="character_name_label">
           <property name="text">
            <string>Character</string>
           </property>
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="character_name">
           <property name="text">
            <string>CharName</string>
           </property>
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QLabel" name="label_3">
+         <widget class="QLabel" name="character_server_label">
           <property name="text">
            <string>Server</string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLabel" name="label_4">
+         <widget class="QLabel" name="character_server">
           <property name="text">
            <string>ServerName</string>
           </property>
@@ -145,9 +145,6 @@
      <string>File</string>
     </property>
     <addaction name="action_Open"/>
-    <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-    <addaction name="actionsdf_2"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
