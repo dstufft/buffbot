@@ -52,6 +52,8 @@ class Worker(QObject):
         if paths:
             self._watcher.removePaths(paths)
 
+        self._buffbot.close()
+
         self.finished.emit()
 
     def stop(self):
@@ -62,11 +64,13 @@ class Worker(QObject):
 
         if self._buffbot is not None:
             if not os.path.samefile(filename, self._buffbot.filename):
-                # TODO: Cleanup the exiting BuffBot.
+                self._watcher.removePath(filename)
+                self._buffbot.close()
                 self._buffbot = None
 
         if self._buffbot is None:
             self._buffbot = BuffBot(filename=filename)
+            self._buffbot.load()
             self._watcher.addPath(filename)
             self._watcher.addPath(os.path.dirname(filename))
 
