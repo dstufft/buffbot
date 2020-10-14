@@ -7,8 +7,8 @@ from fbs_runtime.application_context.PyQt5 import (
 from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow
 
-from ..core import BuffBot
-from .generated.main_window import Ui_MainWindow
+from buffbot.core import BuffBot
+from buffbot.ui.generated.main_window import Ui_MainWindow
 
 # Configuration
 # Log File Location
