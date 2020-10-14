@@ -110,7 +110,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "BuffBot"))
         self.character_name_label.setText(_translate("MainWindow", "Character"))
         self.character_name.setText(_translate("MainWindow", "CharName"))
         self.character_server_label.setText(_translate("MainWindow", "Server"))

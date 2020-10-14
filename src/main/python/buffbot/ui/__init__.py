@@ -116,6 +116,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # because QT Designer has default text that makes it easier to tell what
         # is happening when laying out the UI, but which isn't the best default
         # when first opening the application.
+        self.setWindowTitle("BuffBot")
         self.character_name.setText("")
         self.character_server.setText("")
 
@@ -161,6 +162,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.worker.filename(filename)
 
     def update_character(self, char):
+        self.setWindowTitle(f"BuffBot - {char.name} ({char.server_display})")
         self.character_name.setText(char.name)
         self.character_server.setText(char.server_display)
 
