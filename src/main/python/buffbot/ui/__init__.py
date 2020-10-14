@@ -31,6 +31,7 @@ class Worker(QObject):
 
     finished = pyqtSignal()
     characterDetails = pyqtSignal(Character)
+    monitoringFile = pyqtSignal(str)
 
     _stopping = pyqtSignal()
     _filename = pyqtSignal(str)
@@ -85,6 +86,8 @@ class Worker(QObject):
             self._watcher.addPath(filename)
             self._watcher.addPath(os.path.dirname(filename))
 
+        self.monitoringFile.emit(filename)
+
     def _check_for_monitored(self, path):
         # Check to see if our desired filename is currently being watched, if
         # it's not, then we'll need see if it exists on disk, and if so we'll
@@ -129,6 +132,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Wire the worker up to be able to pass data back into the UI.
         self.worker.characterDetails.connect(self.update_character)
+        self.worker.monitoringFile.connect(self.update_statusbar)
 
         # Start our thread so it can start processing information.
         self.thread.start()
@@ -159,3 +163,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def update_character(self, char):
         self.character_name.setText(char.name)
         self.character_server.setText(char.server_display)
+
+    def update_statusbar(self, filename):
+        self.statusbar.showMessage(f"Monitoring {filename}")
