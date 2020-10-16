@@ -112,6 +112,14 @@ class Character:
         )
 
 
+@attr.s(slots=True, auto_attribs=True, frozen=True)
+class Spell:
+
+    name: str
+    gem: int
+    success_message: str
+
+
 class BuffBot:
     def __init__(self, *, filename):
         self.filename = filename
