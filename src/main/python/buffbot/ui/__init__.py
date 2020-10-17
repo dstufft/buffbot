@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMainWindow, QMe
 
 from buffbot.core import BuffBot, Character, Spell
 from buffbot.ui.generated.add_spell import Ui_AddSpell
+from buffbot.ui.generated.add_acl import Ui_AddACL
 from buffbot.ui.generated.main_window import Ui_MainWindow
 
 # Configuration
@@ -166,6 +167,22 @@ class AddSpell(QDialog, Ui_AddSpell):
         return None
 
 
+class AddAcl(QDialog, Ui_AddACL):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setupUi(self)
+
+    @classmethod
+    def getName(cls, parent):
+        dlg = cls(parent)
+
+        if dlg.exec_():
+            return dlg.characterName.text()
+
+        return None
+
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -176,6 +193,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.addSpellButton.clicked.connect(self.add_spell)
         self.editSpellButton.clicked.connect(self.edit_spell)
         self.deleteSpellButton.clicked.connect(self.delete_spell)
+        self.addACLEntryButton.clicked.connect(self.add_acl)
+        self.deleteACLEntryButton.clicked.connect(self.delete_acl)
 
         self.db = QtSql.QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName("spells.db")
@@ -191,15 +210,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
             """
         )
+        self.db.exec_(
+            """ CREATE TABLE acls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    character text NOT NULL,
+                    server text NOT NULL,
+                    entry text NOT NULL
+            )
+            """
+        )
 
         self.char = None
 
+        # Setup the spells models
         self.spells = QtSql.QSqlTableModel()
         self.spells.setTable("spells")
         self.spells.setEditStrategy(QtSql.QSqlTableModel.OnFieldChange)
-
         self.spellList.setModel(self.spells)
         self.spellList.setModelColumn(4)
+
+        # Setup the ACL models
+        self.acls = QtSql.QSqlTableModel()
+        self.acls.setTable("acls")
+        self.acls.setEditStrategy(QtSql.QSqlTableModel.OnFieldChange)
+        self.aclList.setModel(self.acls)
+        self.aclList.setModelColumn(3)
 
         # Setup our default UI values, we do this here instead of in QT Designer,
         # because QT Designer has default text that makes it easier to tell what
@@ -249,6 +284,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editSpellButton.setEnabled(True)
         self.deleteSpellButton.setEnabled(True)
 
+        self.addACLEntryButton.setEnabled(True)
+        self.deleteACLEntryButton.setEnabled(True)
+
     def open_file(self):
         filename, _ = QFileDialog.getOpenFileName(
             self, "Open Log File", os.fspath(pathlib.Path.home()), "Log Files (*.txt)"
@@ -269,6 +307,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f"character = '{self.char.name}' AND server = '{self.char.server.value}'"
         )
         self.spells.select()
+
+        self.acls.setFilter(
+            f"character = '{self.char.name}' AND server = '{self.char.server.value}'"
+        )
+        self.acls.select()
 
         self.enable_ui()
 
@@ -316,4 +359,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             QMessageBox.question(
                 self, "Error", "Please select a spell to delete.", QMessageBox.Ok
+            )
+
+    def add_acl(self):
+        name = AddAcl.getName(self)
+
+        if name is not None:
+            record = self.acls.record()
+            record.setValue("character", self.char.name)
+            record.setValue("server", self.char.server.value)
+            record.setValue("entry", name)
+
+            self.acls.insertRecord(self.acls.rowCount(), record)
+            self.acls.select()
+
+    def delete_acl(self):
+        if self.aclList.currentIndex().row() >= 0:
+            print(self.acls.removeRow(self.aclList.currentIndex().row()))
+            self.acls.select()
+        else:
+            QMessageBox.question(
+                self, "Error", "Please select a character to delete.", QMessageBox.Ok
             )

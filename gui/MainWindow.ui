@@ -110,11 +110,11 @@
       </item>
       <item row="2" column="0">
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="1" column="0" colspan="3">
-         <widget class="QListWidget" name="listWidget"/>
-        </item>
         <item row="0" column="2">
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="deleteACLEntryButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Del</string>
           </property>
@@ -128,11 +128,17 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="addACLEntryButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Add</string>
           </property>
          </widget>
+        </item>
+        <item row="1" column="0" colspan="3">
+         <widget class="QListView" name="aclList"/>
         </item>
        </layout>
       </item>
