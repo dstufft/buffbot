@@ -321,15 +321,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def add_spell(self):
         spell = AddSpell.getNewSpell(self)
 
-        record = self.spells.record()
-        record.setValue("character", self.char.name)
-        record.setValue("server", self.char.server.value)
-        record.setValue("name", spell.name)
-        record.setValue("gem", spell.gem)
-        record.setValue("success_message", spell.success_message)
+        if spell is not None:
+            record = self.spells.record()
+            record.setValue("character", self.char.name)
+            record.setValue("server", self.char.server.value)
+            record.setValue("name", spell.name)
+            record.setValue("gem", spell.gem)
+            record.setValue("success_message", spell.success_message)
 
-        self.spells.insertRecord(self.spells.rowCount(), record)
-        self.spells.select()
+            self.spells.insertRecord(self.spells.rowCount(), record)
+            self.spells.select()
 
     def edit_spell(self):
         if self.spellList.currentIndex().row() >= 0:
