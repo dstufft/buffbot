@@ -47,6 +47,7 @@ class ApplicationContext(_ApplicationContext):
 
 class Worker(QObject):
 
+    started = pyqtSignal()
     finished = pyqtSignal()
     characterDetails = pyqtSignal(Character)
     monitoringFile = pyqtSignal(str)
@@ -67,6 +68,8 @@ class Worker(QObject):
         self._watcher = QFileSystemWatcher(self)
         self._watcher.fileChanged.connect(self._process)
         self._watcher.directoryChanged.connect(self._check_for_monitored)
+
+        self.started.emit()
 
     def _do_stop(self):
         paths = self._watcher.directories() + self._watcher.files()
@@ -215,6 +218,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db.setDatabaseName(os.path.join(appdir, "config.db"))
         self.db.open()
         self.db.exec_(
+            """ CREATE TABLE state (
+                key text NOT NULL UNIQUE,
+                value text NOT NULL
+            )
+            """
+        )
+        self.db.exec_(
             """ CREATE TABLE spells (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     character text NOT NULL,
@@ -280,12 +290,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.thread.finished.connect(QApplication.instance().exit)
 
         # Wire the worker up to be able to pass data back into the UI.
+        self.worker.started.connect(self.load_state)
         self.worker.characterDetails.connect(self.update_character)
         self.worker.monitoringFile.connect(self.update_statusbar)
         self.worker.logMessage.connect(self.update_logger)
 
         # Start our thread so it can start processing information.
         self.thread.start()
+
+    def load_state(self):
+        query = self.db.exec_("SELECT value FROM state WHERE key = 'last-filename'")
+        if query.first():
+            self.filename = query.value("value")
+            self._update_worker()
 
     def _get_spells(self):
         spells = []
@@ -343,12 +360,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.deleteACLEntryButton.setEnabled(True)
 
     def open_file(self):
+        directory = (
+            os.path.dirname(self.filename)
+            if self.filename is not None
+            else os.fspath(pathlib.Path.home())
+        )
         filename, _ = QFileDialog.getOpenFileName(
-            self, "Open Log File", os.fspath(pathlib.Path.home()), "Log Files (*.txt)"
+            self, "Open Log File", directory, "Log Files (*.txt)"
         )
 
         if filename:
             self.filename = filename
+            self.db.exec_(
+                f""" INSERT INTO state (key, value)
+                        VALUES ('last-filename', '{self.filename}')
+                        ON CONFLICT (key) DO UPDATE set value = '{self.filename}'
+                """
+            )
             self._update_worker()
 
     def update_character(self, char):
