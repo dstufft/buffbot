@@ -45,6 +45,8 @@ class Ui_MainWindow(object):
         self.gridLayout_4 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_4.setObjectName("gridLayout_4")
         self.logTable = QtWidgets.QTableWidget(self.scrollAreaWidgetContents)
+        self.logTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.logTable.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.logTable.setRowCount(0)
         self.logTable.setColumnCount(1)
         self.logTable.setObjectName("logTable")
