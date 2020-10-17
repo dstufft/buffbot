@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import enum
 import os
+import re
+
+from datetime import datetime
 
 import attr
 
@@ -121,6 +124,9 @@ class Spell:
 
 
 class BuffBot:
+
+    _line_re = re.compile(r"^\[(?P<date>[^\]]+)\]\s+(?P<line>.+)$")
+
     def __init__(self, *, filename, spells, acls, logger=None):
         self.filename = filename
         self.spells = spells
@@ -149,4 +155,8 @@ class BuffBot:
     def process(self):
         while line := self._fp.readline():
             line = line.strip()
-            self.logger(line)
+            if m := self._line_re.search(line):
+                date = datetime.strptime(m.group("date"), "%a %b %d %H:%M:%S %Y")
+                line = m.group("line")
+
+                self.logger(date, line)

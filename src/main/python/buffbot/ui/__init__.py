@@ -1,3 +1,4 @@
+import datetime
 import os
 import pathlib
 
@@ -24,8 +25,8 @@ from PyQt5.QtWidgets import (
 )
 
 from buffbot.core import BuffBot, Character, Spell
-from buffbot.ui.generated.add_spell import Ui_AddSpell
 from buffbot.ui.generated.add_acl import Ui_AddACL
+from buffbot.ui.generated.add_spell import Ui_AddSpell
 from buffbot.ui.generated.main_window import Ui_MainWindow
 
 # Configuration
@@ -51,7 +52,7 @@ class Worker(QObject):
     finished = pyqtSignal()
     characterDetails = pyqtSignal(Character)
     monitoringFile = pyqtSignal(str)
-    logMessage = pyqtSignal(str)
+    logMessage = pyqtSignal(datetime.datetime, str)
 
     _stopping = pyqtSignal()
     _configure = pyqtSignal(str, list, list)
@@ -134,8 +135,8 @@ class Worker(QObject):
     def _process(self, path):
         self._buffbot.process()
 
-    def _callback(self, line):
-        self.logMessage.emit(line)
+    def _callback(self, date, line):
+        self.logMessage.emit(date, line)
 
 
 class SpellModel(QAbstractListModel):
@@ -269,6 +270,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("BuffBot")
         self.character_name.setText("")
         self.character_server.setText("")
+        self.logTable.setColumnWidth(0, 110)
 
         # Hookup our UI to the functions that will implement their functionality
         self.action_Open.triggered.connect(self.open_file)
@@ -403,9 +405,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def update_statusbar(self, filename):
         self.statusbar.showMessage(f"Monitoring {filename}")
 
-    def update_logger(self, line):
+    def update_logger(self, date, line):
         self.logTable.insertRow(0)
-        self.logTable.setItem(0, 0, QTableWidgetItem(line))
+        self.logTable.setItem(
+            0, 0, QTableWidgetItem(date.strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        self.logTable.setItem(0, 1, QTableWidgetItem(line))
 
         # We only want to keep the 500 latest entries, because we don't want our memory
         # to grow unbounded.
