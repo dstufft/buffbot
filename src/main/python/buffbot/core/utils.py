@@ -1,4 +1,5 @@
 import os
+import string
 
 
 WINDOWS = os.name == "nt"
@@ -7,6 +8,7 @@ WINDOWS = os.name == "nt"
 if WINDOWS:
     import msvcrt
     import win32file
+    import pydirectinput as kb
 
     def shared_open(filename):
         handle = win32file.CreateFile(
@@ -25,8 +27,44 @@ if WINDOWS:
 
         return open(fd, encoding="utf8")
 
+    _UPPERCASE_SYMBOLS = {
+        "!": "1",
+        "@": "2",
+        "#": "3",
+        "$": "4",
+        "%": "5",
+        "^": "6",
+        "&": "7",
+        "*": "8",
+        "(": "9",
+        ")": "0",
+    }
+
+    def write_command(command):
+        for c in command:
+            # Determine if this character needs the shift key entered or not,
+            shifted = c in string.ascii_uppercase or c in _UPPERCASE_SYMBOLS
+
+            # Determine the actual letter to type, it has to be the "lowercase"
+            # variant to make it work.
+            c = _UPPERCASE_SYMBOLS.get(c, c.lower())
+
+            # Actually write out the character, holding down shift as required
+            if shifted:
+                kb.keyDown("shift", _pause=False)
+            kb.press(c, _pause=False)
+            if shifted:
+                kb.keyUp("shift", _pause=False)
+
+        kb.press("enter", _pause=False)
+
 
 else:
 
     def shared_open(filename):
         return open(filename, encoding="utf8")
+
+    def write_command(command):
+        raise NotImplementedError(
+            "Writing commands is not implemented for non Windows platforms."
+        )
