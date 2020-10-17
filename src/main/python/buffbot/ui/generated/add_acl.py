@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_AddACL(object):
     def setupUi(self, AddACL):
         AddACL.setObjectName("AddACL")
-        AddACL.resize(400, 300)
+        AddACL.resize(400, 91)
         self.widget = QtWidgets.QWidget(AddACL)
         self.widget.setGeometry(QtCore.QRect(0, 10, 391, 72))
         self.widget.setObjectName("widget")
