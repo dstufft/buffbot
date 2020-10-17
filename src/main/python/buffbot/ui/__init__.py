@@ -29,14 +29,6 @@ from buffbot.ui.generated.add_acl import Ui_AddACL
 from buffbot.ui.generated.add_spell import Ui_AddSpell
 from buffbot.ui.generated.main_window import Ui_MainWindow
 
-# Configuration
-# Log File Location
-#  - Parse: Character Name, Server Name
-# Spells to Cast?
-#   - Gem #
-#   - Success Message
-# Access List for Commands?
-
 
 class ApplicationContext(_ApplicationContext):
     def run(self):

@@ -12,24 +12,6 @@ from .events import Event, Hail
 from .types import Character, Spell
 from .utils import shared_open
 
-# Agnarr (PoP-Locked Progression)	1. True Box = One login per computer
-# Aradune	1. True Box = One login per computer.
-# 2. Timelocked Progression.
-# 3. Boxing up to 2 accounts per computer is allowed.
-# Coirnav	1. True Box = One login per computer
-# 2. Timelocked Progression
-# Mangler	1. True Box = One login per computer.
-# 2. Timelocked Progression.
-# Miragul	1. Started in the House of Thule expansion.
-# 2. True Box = One login per computer.
-# Phinigel	1. True Box = One login per computer.
-# 2. Timelocked Progression
-# Ragefire	1. Voting Timelocked Progression
-# 2. Boxing multiple accounts from one computer is allowed.
-# Rizlona	1. True Box = One login per computer.
-# 2. Timelocked Progression.
-# Selo (Fast Timelocked Progression)	1. True Box = One login per computer.
-
 
 class BuffBot:
 
