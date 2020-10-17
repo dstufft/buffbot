@@ -369,8 +369,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage(f"Monitoring {filename}")
 
     def update_logger(self, line):
-        self.logTable.insertRow(self.logTable.rowCount())
-        self.logTable.setItem(self.logTable.rowCount() - 1, 0, QTableWidgetItem(line))
+        self.logTable.insertRow(0)
+        self.logTable.setItem(0, 0, QTableWidgetItem(line))
 
     def add_spell(self):
         spell = AddSpell.getNewSpell(self)
