@@ -121,9 +121,18 @@ class Spell:
 
 
 class BuffBot:
-    def __init__(self, *, filename):
+    def __init__(self, *, filename, spells, acls):
         self.filename = filename
+        self.spells = spells
+        self.acls = acls
+
         self.character = Character.from_filename(self.filename)
+
+    def __repr__(self):
+        return (
+            f"<BuffBot (filename={self.filename!r}, "
+            f"spells={self.spells!r}, acls={self.acls!r})>"
+        )
 
     def load(self):
         self._fp = shared_open(self.filename)

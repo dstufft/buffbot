@@ -44,7 +44,7 @@ class Worker(QObject):
     monitoringFile = pyqtSignal(str)
 
     _stopping = pyqtSignal()
-    _filename = pyqtSignal(str)
+    _configure = pyqtSignal(str, list, list)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,7 +53,7 @@ class Worker(QObject):
 
     def start(self):
         self._stopping.connect(self._do_stop)
-        self._filename.connect(self._do_create_bot)
+        self._configure.connect(self._do_create_bot)
 
         self._watcher = QFileSystemWatcher(self)
         self._watcher.fileChanged.connect(self._process)
@@ -72,17 +72,20 @@ class Worker(QObject):
     def stop(self):
         self._stopping.emit()
 
-    def _do_create_bot(self, filename):
-        filename = os.path.abspath(filename)
-
+    def _do_create_bot(self, filename, spells, acls):
         # If we have an existing buffbot that is listening to a different
         # file, then we need to stop watching that file, close out our
         # existing buffbot, and set it to None so that a new one can be
         # created later.
         if self._buffbot is not None:
-            if not os.path.samefile(filename, self._buffbot.filename):
+            if (
+                not os.path.samefile(filename, self._buffbot.filename)
+                or self._buffbot.spells != spells
+                or self._buffbot.acls != acls
+            ):
                 self._watcher.removePath(self._buffbot.filename)
                 self._watcher.removePath(os.path.dirname(self._buffbot.filename))
+
                 self._buffbot.close()
                 self._buffbot = None
 
@@ -90,13 +93,13 @@ class Worker(QObject):
         # or because the file has changed, then create a new one and
         # start watching the file and the directory containing that file.
         if self._buffbot is None:
-            self._buffbot = BuffBot(filename=filename)
+            self._buffbot = BuffBot(filename=filename, spells=spells, acls=acls)
             self.characterDetails.emit(self._buffbot.character)
             self._buffbot.load()
             self._watcher.addPath(filename)
             self._watcher.addPath(os.path.dirname(filename))
 
-        self.monitoringFile.emit(filename)
+            self.monitoringFile.emit(filename)
 
     def _check_for_monitored(self, path):
         # Check to see if our desired filename is currently being watched, if
@@ -108,14 +111,11 @@ class Worker(QObject):
                 self._buffbot.reload()
                 self._process(self._buffbot.filename)
 
-    def filename(self, filename):
-        self._filename.emit(filename)
+    def configure(self, filename, spells, acls):
+        self._configure.emit(filename, spells, acls)
 
     def _process(self, path):
         self._buffbot.process()
-
-    def spells(self, spells):
-        pass
 
 
 class SpellModel(QAbstractListModel):
@@ -220,6 +220,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             """
         )
 
+        self.filename = None
         self.char = None
 
         # Setup the spells models
@@ -262,6 +263,36 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Start our thread so it can start processing information.
         self.thread.start()
 
+    def _get_spells(self):
+        spells = []
+        for i in range(self.spells.rowCount()):
+            record = self.spells.record(i)
+            spells.append(
+                Spell(
+                    name=record.value("name"),
+                    gem=record.value("gem"),
+                    success_message=record.value("success_message"),
+                )
+            )
+
+        return spells
+
+    def _get_acls(self):
+        acls = []
+        for i in range(self.acls.rowCount()):
+            record = self.acls.record(i)
+            acls.append(record.value("entry"))
+
+        return acls
+
+    def _update_worker(self):
+        filename = self.filename
+        if filename is not None:
+            spells = self._get_spells()
+            acls = self._get_acls()
+
+            self.worker.configure(filename, spells, acls)
+
     def closeEvent(self, e):
         # If the thread is running, we'll tell the worker to stop, and rely on
         # the signals to have first the thread shutdown, and then the entire
@@ -293,7 +324,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
         if filename:
-            self.worker.filename(filename)
+            self.filename = filename
+            self._update_worker()
 
     def update_character(self, char):
         self.char = char
@@ -312,6 +344,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f"character = '{self.char.name}' AND server = '{self.char.server.value}'"
         )
         self.acls.select()
+        self._update_worker()
 
         self.enable_ui()
 
@@ -331,6 +364,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             self.spells.insertRecord(self.spells.rowCount(), record)
             self.spells.select()
+            self._update_worker()
 
     def edit_spell(self):
         if self.spellList.currentIndex().row() >= 0:
@@ -348,6 +382,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 record.setValue("gem", spell.gem)
                 record.setValue("success_message", spell.success_message)
                 self.spells.setRecord(self.spellList.currentIndex().row(), record)
+                self._update_worker()
         else:
             QMessageBox.question(
                 self, "Error", "Please select a spell to edit.", QMessageBox.Ok
@@ -357,6 +392,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.spellList.currentIndex().row() >= 0:
             self.spells.removeRow(self.spellList.currentIndex().row())
             self.spells.select()
+            self._update_worker()
         else:
             QMessageBox.question(
                 self, "Error", "Please select a spell to delete.", QMessageBox.Ok
@@ -373,11 +409,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             self.acls.insertRecord(self.acls.rowCount(), record)
             self.acls.select()
+            self._update_worker()
 
     def delete_acl(self):
         if self.aclList.currentIndex().row() >= 0:
             print(self.acls.removeRow(self.aclList.currentIndex().row()))
             self.acls.select()
+            self._update_worker()
         else:
             QMessageBox.question(
                 self, "Error", "Please select a character to delete.", QMessageBox.Ok
