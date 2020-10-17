@@ -13,7 +13,14 @@ from PyQt5.QtCore import (
     QThread,
     pyqtSignal,
 )
-from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QTableWidgetItem,
+)
 
 from buffbot.core import BuffBot, Character, Spell
 from buffbot.ui.generated.add_spell import Ui_AddSpell
@@ -42,6 +49,7 @@ class Worker(QObject):
     finished = pyqtSignal()
     characterDetails = pyqtSignal(Character)
     monitoringFile = pyqtSignal(str)
+    logMessage = pyqtSignal(str)
 
     _stopping = pyqtSignal()
     _configure = pyqtSignal(str, list, list)
@@ -93,7 +101,12 @@ class Worker(QObject):
         # or because the file has changed, then create a new one and
         # start watching the file and the directory containing that file.
         if self._buffbot is None:
-            self._buffbot = BuffBot(filename=filename, spells=spells, acls=acls)
+            self._buffbot = BuffBot(
+                filename=filename,
+                spells=spells,
+                acls=acls,
+                logger=self._callback,
+            )
             self.characterDetails.emit(self._buffbot.character)
             self._buffbot.load()
             self._watcher.addPath(filename)
@@ -116,6 +129,9 @@ class Worker(QObject):
 
     def _process(self, path):
         self._buffbot.process()
+
+    def _callback(self, line):
+        self.logMessage.emit(line)
 
 
 class SpellModel(QAbstractListModel):
@@ -259,6 +275,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Wire the worker up to be able to pass data back into the UI.
         self.worker.characterDetails.connect(self.update_character)
         self.worker.monitoringFile.connect(self.update_statusbar)
+        self.worker.logMessage.connect(self.update_logger)
 
         # Start our thread so it can start processing information.
         self.thread.start()
@@ -350,6 +367,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def update_statusbar(self, filename):
         self.statusbar.showMessage(f"Monitoring {filename}")
+
+    def update_logger(self, line):
+        self.logTable.insertRow(self.logTable.rowCount())
+        self.logTable.setItem(self.logTable.rowCount() - 1, 0, QTableWidgetItem(line))
 
     def add_spell(self):
         spell = AddSpell.getNewSpell(self)

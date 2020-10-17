@@ -121,10 +121,11 @@ class Spell:
 
 
 class BuffBot:
-    def __init__(self, *, filename, spells, acls):
+    def __init__(self, *, filename, spells, acls, logger=None):
         self.filename = filename
         self.spells = spells
         self.acls = acls
+        self._logger = logger
 
         self.character = Character.from_filename(self.filename)
 
@@ -147,5 +148,5 @@ class BuffBot:
 
     def process(self):
         while line := self._fp.readline():
-            # TODO: Actually process the events
-            print(line)
+            line = line.strip()
+            self._logger(line)
