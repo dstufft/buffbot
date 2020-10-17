@@ -9,6 +9,7 @@ from PyQt5.QtCore import (
     QAbstractListModel,
     QFileSystemWatcher,
     QObject,
+    QStandardPaths,
     Qt,
     QThread,
     pyqtSignal,
@@ -205,15 +206,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.setupUi(self)
 
-        self.action_Open.triggered.connect(self.open_file)
-        self.addSpellButton.clicked.connect(self.add_spell)
-        self.editSpellButton.clicked.connect(self.edit_spell)
-        self.deleteSpellButton.clicked.connect(self.delete_spell)
-        self.addACLEntryButton.clicked.connect(self.add_acl)
-        self.deleteACLEntryButton.clicked.connect(self.delete_acl)
+        appdir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
+        config_db = os.path.join(appdir, "config.db")
+
+        os.makedirs(os.path.dirname(config_db), exist_ok=True)
 
         self.db = QtSql.QSqlDatabase.addDatabase("QSQLITE")
-        self.db.setDatabaseName("spells.db")
+        self.db.setDatabaseName(os.path.join(appdir, "config.db"))
         self.db.open()
         self.db.exec_(
             """ CREATE TABLE spells (
@@ -260,6 +259,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("BuffBot")
         self.character_name.setText("")
         self.character_server.setText("")
+
+        # Hookup our UI to the functions that will implement their functionality
+        self.action_Open.triggered.connect(self.open_file)
+        self.addSpellButton.clicked.connect(self.add_spell)
+        self.editSpellButton.clicked.connect(self.edit_spell)
+        self.deleteSpellButton.clicked.connect(self.delete_spell)
+        self.addACLEntryButton.clicked.connect(self.add_acl)
+        self.deleteACLEntryButton.clicked.connect(self.delete_acl)
 
         # Spawn our background worker thread and schedule the worker to
         # start in it once the thread starts, and the thread to quit when
