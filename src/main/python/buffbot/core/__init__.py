@@ -125,7 +125,7 @@ class BuffBot:
         self.filename = filename
         self.spells = spells
         self.acls = acls
-        self._logger = logger
+        self.logger = logger
 
         self.character = Character.from_filename(self.filename)
 
@@ -149,4 +149,4 @@ class BuffBot:
     def process(self):
         while line := self._fp.readline():
             line = line.strip()
-            self._logger(line)
+            self.logger(line)
