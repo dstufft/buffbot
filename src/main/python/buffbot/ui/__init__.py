@@ -372,6 +372,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.logTable.insertRow(0)
         self.logTable.setItem(0, 0, QTableWidgetItem(line))
 
+        # We only want to keep the 500 latest entries, because we don't want our memory
+        # to grow unbounded.
+        for i in range(max(0, self.logTable.rowCount() - 500)):
+            self.logTable.removeRow(i + 500)
+
     def add_spell(self):
         spell = AddSpell.getNewSpell(self)
 
