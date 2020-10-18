@@ -10,7 +10,7 @@ from boltons.setutils import IndexedSet
 from .actions import Action, CastSpell, Target
 from .events import Event, Hail
 from .types import Character, Spell
-from .utils import shared_open
+from .utils import shared_open, is_current_window
 
 
 class BuffBot:
@@ -34,15 +34,30 @@ class BuffBot:
 
         self._buff_queue = IndexedSet()
         self._current_target: typing.Optional[str] = None
+        self._current_started: typing.Optional[datetime] = None
         self._current_action: typing.Optional[typing.Tuple[datetime, Action]] = None
         self._pending_actions: typing.List[Action] = []
         self._pause_until: typing.Optional[datetime] = None
+
+        self._window_logged = False
 
     def __repr__(self):
         return (
             f"<BuffBot (filename={self.filename!r}, "
             f"spells={self.spells!r}, acls={self.acls!r})>"
         )
+
+    def _check_and_log_window(self):
+        if is_current_window("EverQuest"):
+            self._window_logged = False
+            return True
+        else:
+            if not self._window_logged:
+                self.logger(
+                    "Not processing buffs, as EverQuest isn't the active window."
+                )
+            self._window_logged = True
+            return False
 
     def load(self):
         self._fp = shared_open(self.filename)
@@ -107,8 +122,11 @@ class BuffBot:
                             # new event to our pending events.
                             self._current_action = None
 
-                    # Finally, we'll handle this event on it's own as well
-                    self._handle_event(event)
+                    # Finally, we'll handle this event on it's own as well, however
+                    # we'll only do this if the current window is an EverQuest windowm
+                    # otherwise we're going to just skip this event completely.
+                    if self._check_and_log_window():
+                        self._handle_event(event)
 
     def process(self):
         # Check to see if our current action has been waiting for a confirmation for
@@ -139,11 +157,28 @@ class BuffBot:
                 [Target(target=target)]
                 + [CastSpell(target=target, spell=s) for s in self.spells]
             )
+            self._current_started = datetime.now()
 
         if self._current_action is None and self._pending_actions:
-            self._current_action = datetime.now(), self._pending_actions.pop(0)
-            # TODO: Bring EQ Window to forefront
-            self._current_action[1].do(logger=self.logger)
+            # Before starting a new action, we're going to check to make sure that
+            # the EverQuest window is the active window, and if not we're going to
+            # pause.
+            if self._check_and_log_window():
+                # Because the EverQuest window could have been in the background
+                # for quite some time, it's possible that these pending actions
+                # are very stale. In that case, we're going to just clear out
+                # our pending actions, and move onto trying to buff other people.
+                #
+                # In this case, we'll use a 5 minute timeout.
+                if (datetime.now() - self._current_started).total_seconds() >= 300:
+                    self._current_started = None
+                    self._pending_actions.clear()
+                    self._buff_queue.clear()
+                # Otherwise, our pending actions are fresh enough, and we can go ahead
+                # and process the next one.
+                else:
+                    self._current_action = datetime.now(), self._pending_actions.pop(0)
+                    self._current_action[1].do(logger=self.logger)
 
     @functools.singledispatchmethod
     def _handle_event(self, event):

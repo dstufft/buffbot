@@ -8,6 +8,7 @@ WINDOWS = os.name == "nt"
 if WINDOWS:
     import msvcrt
     import win32file
+    import win32gui
     import pydirectinput as kb
 
     def shared_open(filename):
@@ -58,6 +59,12 @@ if WINDOWS:
 
         kb.press("enter", _pause=False)
 
+    def is_current_window(window_name):
+        handle = win32gui.GetForegroundWindow()
+        name = win32gui.GetWindowText(handle)
+
+        return window_name == name
+
 
 else:
 
@@ -68,3 +75,6 @@ else:
         raise NotImplementedError(
             "Writing commands is not implemented for non Windows platforms."
         )
+
+    def is_current_window(window_name):
+        return True
