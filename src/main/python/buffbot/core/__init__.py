@@ -56,7 +56,6 @@ class BuffBot:
     def process(self):
         # First we go through, and process all of the lines that are currently,
         # in the log file.
-        print((1, self._pending_actions))
         while line := self._fp.readline():
             line = line.strip()
             if m := self._line_re.search(line):
@@ -99,8 +98,6 @@ class BuffBot:
 
                     # Finally, we'll handle this event on it's own as well
                     self._handle_event(event)
-
-        print((2, self._pending_actions))
 
         # Now that we've exhausted the log file, we'll go through and start
         # buffing people as needed.
