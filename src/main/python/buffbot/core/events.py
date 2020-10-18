@@ -1,18 +1,23 @@
+import datetime
 import re
 import typing
 
 import attr
 
 
+@attr.s(frozen=True, auto_attribs=True)
 class Event:
+
+    date: datetime.datetime
+
     def __init_subclass__(cls, *, search_text, **kwargs):
         super().__init_subclass__(**kwargs)
         cls._search_re = re.compile(search_text)
 
     @classmethod
-    def search(cls, line):
+    def search(cls, date, line):
         if m := cls._search_re.search(line):
-            return cls(**m.groupdict())
+            return cls(date=date, **m.groupdict())
 
 
 @attr.s(frozen=True, auto_attribs=True)

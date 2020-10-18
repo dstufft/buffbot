@@ -10,15 +10,20 @@ class Action:
         super().__init_subclass__(**kwargs)
         cls._commands = commands
 
-    def do(self):
+    def do(self, *, logger):
+        self.log(logger)
+
         for command in self._commands:
             write_command(command.format(**attr.asdict(self)))
 
     def check(self, event):
         raise NotImplementedError
 
-    def failed(self, event, pending_events):
+    def failed(self, event, pending_events, *, logger):
         raise NotImplementedError
+
+    def log(self, logger):
+        pass
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -31,10 +36,11 @@ class Target(Action, commands=["/tar {target}", "/say Hail, %t"]):
             if event.source.lower() == "you":
                 return event.target.lower() == self.target.lower()
 
-    def failed(self, event, pending_events):
+    def failed(self, event, pending_events, *, logger):
         # If we've failed to target the person we're trying to buff
         # then there's nothing more we can do to that person, so we
         # will just drop all of the pending events.
+        logger(f"Could not target {self.target}")
         return []
 
 
@@ -43,6 +49,9 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
 
     target: str
     spell: Spell
+
+    def log(self, logger):
+        logger(f"Buffing {self.target} with {self.spell.name}.")
 
     def check(self, event):
         # If we get a blocked spell message, and that spell is the spell
@@ -84,7 +93,7 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
         ):
             return False
 
-    def failed(self, event, pending_events):
+    def failed(self, event, pending_events, *, logger):
         # If the person has run out of range, then we consider that a
         # hard fail, and remove all the pending events.
         #
@@ -97,6 +106,10 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
         if isinstance(
             event, (events.OutOfRange, events.NoTarget, events.SpellNotTakeHold)
         ):
+            logger(
+                f"Could not buff {self.target} with {self.spell.name} "
+                f"({event.__class__.__name__}"
+            )
             return []
         # If our spell was interrupted for some reason, then we'll go
         # ahead and recast it.

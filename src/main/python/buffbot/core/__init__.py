@@ -66,7 +66,7 @@ class BuffBot:
                 # Parse the line into an event.
                 event = None
                 for event_type in Event.__subclasses__():
-                    if event := event_type.search(line):
+                    if event := event_type.search(date, line):
                         break
 
                 if event is not None:
@@ -88,7 +88,7 @@ class BuffBot:
                             # recoverable, while some may not be.
                             if not result:
                                 self._pending_actions = self._current_action[1].failed(
-                                    event, self._pending_actions
+                                    event, self._pending_actions, logger=self.logger
                                 )
 
                             # Regardless of if the action was succesful or not, the
@@ -123,9 +123,7 @@ class BuffBot:
         if self._current_action is None and self._pending_actions:
             self._current_action = datetime.now(), self._pending_actions.pop(0)
             # TODO: Bring EQ Window to forefront
-            self._current_action[1].do()
-
-        # self.logger(date, line)
+            self._current_action[1].do(logger=self.logger)
 
     @functools.singledispatchmethod
     def _handle_event(self, event):

@@ -127,8 +127,8 @@ class Worker(QObject):
     def _process(self, path):
         self._buffbot.process()
 
-    def _callback(self, date, line):
-        self.logMessage.emit(date, line)
+    def _callback(self, line):
+        self.logMessage.emit(datetime.datetime.now(), line)
 
 
 class SpellModel(QAbstractListModel):
