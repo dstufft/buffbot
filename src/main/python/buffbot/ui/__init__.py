@@ -13,6 +13,7 @@ from PyQt5.QtCore import (
     QStandardPaths,
     Qt,
     QThread,
+    QTimer,
     pyqtSignal,
 )
 from PyQt5.QtWidgets import (
@@ -58,8 +59,11 @@ class Worker(QObject):
         self._stopping.connect(self._do_stop)
         self._configure.connect(self._do_create_bot)
 
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._process_only)
+
         self._watcher = QFileSystemWatcher(self)
-        self._watcher.fileChanged.connect(self._process)
+        self._watcher.fileChanged.connect(self._read_and_process)
         self._watcher.directoryChanged.connect(self._check_for_monitored)
 
         self.started.emit()
@@ -68,6 +72,7 @@ class Worker(QObject):
         paths = self._watcher.directories() + self._watcher.files()
         if paths:
             self._watcher.removePaths(paths)
+        self._timer.stop()
 
         if self._buffbot is not None:
             self._buffbot.close()
@@ -90,6 +95,7 @@ class Worker(QObject):
             ):
                 self._watcher.removePath(self._buffbot.filename)
                 self._watcher.removePath(os.path.dirname(self._buffbot.filename))
+                self._timer.stop()
 
                 self._buffbot.close()
                 self._buffbot = None
@@ -108,6 +114,7 @@ class Worker(QObject):
             self._buffbot.load()
             self._watcher.addPath(filename)
             self._watcher.addPath(os.path.dirname(filename))
+            self._timer.start(1000)
 
             self.monitoringFile.emit(filename)
 
@@ -124,7 +131,11 @@ class Worker(QObject):
     def configure(self, filename, spells, acls):
         self._configure.emit(filename, spells, acls)
 
-    def _process(self, path):
+    def _process_only(self):
+        self._buffbot.process()
+
+    def _read_and_process(self, path):
+        self._buffbot.read()
         self._buffbot.process()
 
     def _callback(self, line):

@@ -36,6 +36,7 @@ class BuffBot:
         self._current_target: typing.Optional[str] = None
         self._current_action: typing.Optional[typing.Tuple[datetime, Action]] = None
         self._pending_actions: typing.List[Action] = []
+        self._pause_until: typing.Optional[datetime] = None
 
     def __repr__(self):
         return (
@@ -54,7 +55,7 @@ class BuffBot:
     def close(self):
         self._fp.close()
 
-    def process(self):
+    def read(self):
         # First we go through, and process all of the lines that are currently,
         # in the log file.
         while line := self._fp.readline():
@@ -86,10 +87,19 @@ class BuffBot:
                             # Our action was unsucessful, so we'll have the action
                             # itself decide what to do, since some actions might be
                             # recoverable, while some may not be.
-                            if not result:
+                            if not result.ok:
                                 self._pending_actions = self._current_action[1].failed(
                                     event, self._pending_actions, logger=self.logger
                                 )
+
+                            # If we've been given a pause, then we'll set a pause until
+                            # based off of that. This is going to use the datetime of
+                            # the current event, this will help reduce any additonal
+                            # waiting that might come around from lagging from when the
+                            # file was written to when it was actually read and
+                            # processed.
+                            if result.pause is not None:
+                                self._pause_until = event.date + result.pause
 
                             # Regardless of if the action was succesful or not, the
                             # current action is now complete, if the action was able
@@ -100,19 +110,29 @@ class BuffBot:
                     # Finally, we'll handle this event on it's own as well
                     self._handle_event(event)
 
-        # We've read all the log lines, we're going to check to see if our current
-        # action has been waiting for a confirmation for too long, if it has, then
-        # we will just assume it completed or failed, but either way we'll just keep
-        # going. The most likely case for this is a buff block, which prevents any
-        # message from happening.
+    def process(self):
+        # Check to see if our current action has been waiting for a confirmation for
+        # too long, if it has, then we will just assume it completed or failed, but
+        # either way we'll just keep going. The most likely case for this is a buff
+        # block, which prevents any message from happening.
         if (
             self._current_action is not None
             and (datetime.now() - self._current_action[0]).total_seconds() > 15
         ):
             self._current_action = None
 
-        # Now that we've exhausted the log file, we'll go through and start
-        # buffing people as needed.
+        # If we've been marked to pause, then we're going to stop processing at this
+        # point, unlesss we've gone past our pause until point.
+        if self._pause_until is not None:
+            if datetime.now() >= self._pause_until:
+                # We've reached our pause until, so clear it out.
+                self._pause_until = None
+            else:
+                # We have not reached our pause until, so skip the rest of this
+                # iteration.
+                return
+
+        # Go through and start buffing people as needed.
         if not (self._current_action or self._pending_actions) and self._buff_queue:
             target = self._buff_queue.pop(0)
             self._pending_actions.extend(

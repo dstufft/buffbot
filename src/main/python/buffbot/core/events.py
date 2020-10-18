@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import re
 import typing
@@ -18,6 +20,8 @@ class Event:
     def search(cls, date, line):
         if m := cls._search_re.search(line):
             return cls(date=date, **m.groupdict())
+
+        return None
 
 
 @attr.s(frozen=True, auto_attribs=True)

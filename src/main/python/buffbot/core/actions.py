@@ -1,8 +1,18 @@
+import datetime
+import typing
+
 import attr
 
 from . import events
 from .types import Spell
 from .utils import write_command
+
+
+@attr.s(slots=True, frozen=True, auto_attribs=True)
+class Result:
+
+    ok: bool
+    pause: typing.Optional[datetime.timedelta] = attr.ib(default=None)
 
 
 class Action:
@@ -16,7 +26,7 @@ class Action:
         for command in self._commands:
             write_command(command.format(**attr.asdict(self)))
 
-    def check(self, event):
+    def check(self, event) -> typing.Optional[Result]:
         raise NotImplementedError
 
     def failed(self, event, pending_events, *, logger):
@@ -31,10 +41,12 @@ class Target(Action, commands=["/tar {target}", "/say Hail, %t"]):
 
     target: str
 
-    def check(self, event):
+    def check(self, event) -> typing.Optional[Result]:
         if isinstance(event, events.Hail):
             if event.source.lower() == "you":
-                return event.target.lower() == self.target.lower()
+                return Result(ok=event.target.lower() == self.target.lower())
+
+        return None
 
     def failed(self, event, pending_events, *, logger):
         # If we've failed to target the person we're trying to buff
@@ -53,7 +65,13 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
     def log(self, logger):
         logger(f"Buffing {self.target} with {self.spell.name}.")
 
-    def check(self, event):
+    def check(self, event) -> typing.Optional[Result]:
+        if ok := self._check(event):
+            return Result(ok=ok, pause=datetime.timedelta(seconds=2))
+
+        return None
+
+    def _check(self, event):
         # If we get a blocked spell message, and that spell is the spell
         # we're trying to cast, on the person we're trying to cast it on
         # then we'll consider the cast successful.
