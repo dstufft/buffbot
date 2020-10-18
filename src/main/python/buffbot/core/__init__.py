@@ -33,7 +33,7 @@ class BuffBot:
         self.character = Character.from_filename(self.filename)
 
         self._buff_queue = IndexedSet()
-        self._current_action: typing.Optional[Action] = None
+        self._current_action: typing.Optional[typing.Tuple[datetime, Action]] = None
         self._pending_actions: typing.List[Action] = []
 
     def __repr__(self):
@@ -81,12 +81,12 @@ class BuffBot:
                     # 3. None, the event has no bearing on the success/failure of this
                     #          action.
                     if self._current_action is not None:
-                        if (result := self._current_action.check(event)) is not None:
+                        if (result := self._current_action[1].check(event)) is not None:
                             # Our action was unsucessful, so we'll have the action
                             # itself decide what to do, since some actions might be
                             # recoverable, while some may not be.
                             if not result:
-                                self._pending_actions = self._current_action.failed(
+                                self._pending_actions = self._current_action[1].failed(
                                     event, self._pending_actions
                                 )
 
@@ -99,6 +99,17 @@ class BuffBot:
                     # Finally, we'll handle this event on it's own as well
                     self._handle_event(event)
 
+        # We've read all the log lines, we're going to check to see if our current
+        # action has been waiting for a confirmation for too long, if it has, then
+        # we will just assume it completed or failed, but either way we'll just keep
+        # going. The most likely case for this is a buff block, which prevents any
+        # message from happening.
+        if (
+            self._current_action is not None
+            and (datetime.now() - self._current_action[0]).total_seconds() > 15
+        ):
+            self._current_action = None
+
         # Now that we've exhausted the log file, we'll go through and start
         # buffing people as needed.
         if not (self._current_action or self._pending_actions) and self._buff_queue:
@@ -109,9 +120,9 @@ class BuffBot:
             )
 
         if self._current_action is None and self._pending_actions:
-            self._current_action = self._pending_actions.pop(0)
+            self._current_action = datetime.now(), self._pending_actions.pop(0)
             # TODO: Bring EQ Window to forefront
-            self._current_action.do()
+            self._current_action[1].do()
 
         # self.logger(date, line)
 
