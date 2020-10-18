@@ -62,6 +62,15 @@ class SpellFizzle(Event, search_text=r"^Your (?P<spell>.+) spell fizzles!$"):
 
 
 @attr.s(frozen=True, auto_attribs=True)
+class SpellNotTakeHold(
+    Event,
+    search_text=r"^Your (?P<spell>.+) spell did not take hold on (?P<target>\w+)\.$",
+):
+    spell: str
+    target: str
+
+
+@attr.s(frozen=True, auto_attribs=True)
 class Line(Event, search_text=r"^(?P<line>.+)$"):
 
     line: str

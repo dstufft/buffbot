@@ -55,6 +55,15 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
                 and event.target.lower() == self.target.lower()
             ):
                 return True
+        # If we got a message that our spell would not take hold, that
+        # probably means that the person is max buffs, and thus our
+        # spell failed to cast.
+        if isinstance(event, events.SpellNotTakeHold):
+            if (
+                event.spell == self.spell.name
+                and event.target.lower() == self.target.lower()
+            ):
+                return False
         # If we get a generic line event, then we'll check to see if it
         # matches our success message for this spell, if it does then
         # we've good, otherwise this event doesn't mean anything for us.
@@ -81,7 +90,13 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
         #
         # If we don't have a target, then presumably the person has
         # zoned, and this is a hard failure.
-        if isinstance(event, (events.OutOfRange, events.NoTarget)):
+        #
+        # If the spell didn't take hold, we're going to assume that
+        # their buff slots are totally full, and it's pointless to
+        # try to do anything else to them.
+        if isinstance(
+            event, (events.OutOfRange, events.NoTarget, events.SpellNotTakeHold)
+        ):
             return []
         # If our spell was interrupted for some reason, then we'll go
         # ahead and recast it.
