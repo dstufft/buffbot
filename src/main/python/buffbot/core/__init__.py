@@ -33,6 +33,7 @@ class BuffBot:
         self.character = Character.from_filename(self.filename)
 
         self._buff_queue = IndexedSet()
+        self._current_target: typing.Optional[str] = None
         self._current_action: typing.Optional[typing.Tuple[datetime, Action]] = None
         self._pending_actions: typing.List[Action] = []
 
@@ -136,4 +137,24 @@ class BuffBot:
     def _(self, event: Hail):
         # If someone is hailing us, then we will add them to our buff queue
         if event.target.lower() == self.character.name.lower():
+            # We're going to check to see if the person doing the hailing is
+            # the person that our currently pending actions (if there are any)
+            # is targeting. If they are, then this person is currently being
+            # buffed, and shouldn't be added back to the buff queue to buff
+            # again.
+            if (
+                self._current_action is not None
+                and isinstance(self._current_action[1], (Target, CastSpell))
+                and self._current_action[1].target.lower() == event.source.lower()
+            ):
+                return
+            elif (
+                self._pending_actions
+                and isinstance(self._pending_actions[0], (Target, CastSpell))
+                and self._pending_actions[0].target.lower() == event.source.lower()
+            ):
+                return
+
+            # If wer're here, then there's no reason not to go ahead and add
+            # this person to our buff queue.
             self._buff_queue.add(event.source)
