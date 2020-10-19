@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication
 from buffbot.ui import MainWindow
 
 APP_NAME = "BuffBot"
-APP_VERSION = "0.2.2"
+APP_VERSION = "0.2.3"
 
 if __name__ == "__main__":
     app = QApplication([])
