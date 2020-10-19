@@ -20,3 +20,7 @@ tags
 *.sw*
 
 .DS_Store
+
+.pyupdater
+keypack.pyu
+pyu-data

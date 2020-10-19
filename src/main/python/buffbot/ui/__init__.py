@@ -1,10 +1,9 @@
 import datetime
 import os
 import pathlib
+import sys
 
-from fbs_runtime.application_context.PyQt5 import (
-    ApplicationContext as _ApplicationContext,
-)
+from client_config import ClientConfig
 from PyQt5 import QtSql
 from PyQt5.QtCore import (
     QAbstractListModel,
@@ -24,19 +23,12 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QTableWidgetItem,
 )
+from pyupdater.client import Client
 
 from buffbot.core import BuffBot, Character, Spell
 from buffbot.ui.generated.add_acl import Ui_AddACL
 from buffbot.ui.generated.add_spell import Ui_AddSpell
 from buffbot.ui.generated.main_window import Ui_MainWindow
-
-
-class ApplicationContext(_ApplicationContext):
-    def run(self):
-        window = MainWindow()
-        window.show()
-
-        return self.app.exec_()
 
 
 class Worker(QObject):
@@ -208,10 +200,12 @@ class AddAcl(QDialog, Ui_AddACL):
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, app_name, app_version, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setupUi(self)
+
+        self.check_updates(app_name, app_version)
 
         appdir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
         config_db = os.path.join(appdir, "config.db")
@@ -277,6 +271,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Hookup our UI to the functions that will implement their functionality
         self.action_Open.triggered.connect(self.open_file)
+        self.actionUpdate_BuffBot.triggered.connect(self.run_update)
         self.addSpellButton.clicked.connect(self.add_spell)
         self.editSpellButton.clicked.connect(self.edit_spell)
         self.deleteSpellButton.clicked.connect(self.delete_spell)
@@ -308,6 +303,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if query.first():
             self.filename = query.value("value")
             self._update_worker()
+
+    def check_updates(self, app_name, app_version):
+        self.updater = Client(ClientConfig())
+        self.updater.refresh()
+
+        self.app_update = self.updater.update_check(app_name, app_version)
+        if self.app_update is not None:
+            self.actionUpdate_BuffBot.setEnabled(True)
+            QMessageBox.question(
+                self,
+                "Update Available",
+                "There is an update available.",
+                QMessageBox.Ok,
+            )
+
+    def run_update(self):
+        if self.app_update is not None:
+            if not (getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")):
+                # IF we're not running in a PyInstaller Bundle, then we can't update
+                # oursselves, and should error out.
+                QMessageBox.question(
+                    self, "Error", "Cannot update in development.", QMessageBox.Ok
+                )
+                return
+
+            self.app_update.download()
+            if self.app_update.is_downloaded():
+                self.app_update.extract_restart()
 
     def _get_spells(self):
         spells = []
