@@ -7,8 +7,10 @@ WINDOWS = os.name == "nt"
 
 if WINDOWS:
     import msvcrt
+    import win32clipboard
     import win32file
     import win32gui
+    import pywintypes
     import pydirectinput as kb
 
     def shared_open(filename):
@@ -41,7 +43,7 @@ if WINDOWS:
         ")": "0",
     }
 
-    def write_command(command):
+    def _write_command_typed(command):
         for c in command:
             # Determine if this character needs the shift key entered or not,
             shifted = c in string.ascii_uppercase or c in _UPPERCASE_SYMBOLS
@@ -58,6 +60,23 @@ if WINDOWS:
                 kb.keyUp("shift", _pause=False)
 
         kb.press("enter", _pause=False)
+
+    def _write_command_paste(command):
+        win32clipboard.OpenClipboard()
+        win32clipboard.SetClipboardText(command)
+        win32clipboard.CloseClipboard()
+
+        kb.press("enter", _pause=False)
+        kb.keyDown("ctrl", _pause=False)
+        kb.press("v", _pause=False)
+        kb.keyUp("ctrl", _pause=False)
+        kb.press("enter", _pause=False)
+
+    def write_command(command):
+        try:
+            _write_command_paste(command)
+        except pywintypes.error:
+            _write_command_typed(command)
 
     def is_current_window(window_name):
         handle = win32gui.GetForegroundWindow()
