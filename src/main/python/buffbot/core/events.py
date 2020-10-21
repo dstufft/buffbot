@@ -32,6 +32,15 @@ class Hail(Event, search_text=r"^(?P<source>\w+) says?, 'Hail, (?P<target>\w+)'$
 
 
 @attr.s(frozen=True, auto_attribs=True)
+class SpellCast(
+    Event, search_text=r"^(?P<source>\w+) begins? casting (?P<spell>.+)\.$"
+):
+
+    source: str
+    spell: str
+
+
+@attr.s(frozen=True, auto_attribs=True)
 class SpellBlocked(
     Event,
     search_text=r"^Your (?P<spell>.+) spell did not take hold(?: on (?P<target>\w+))?\. \(Blocked by (?P<blocked_by>.+)\.\)$",

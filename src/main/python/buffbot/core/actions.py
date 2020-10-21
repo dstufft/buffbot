@@ -32,8 +32,30 @@ class Action:
     def failed(self, event, pending_events, *, logger):
         raise NotImplementedError
 
+    def retry(self, *, logger):
+        pass
+
     def log(self, logger):
         pass
+
+
+class Retryable:
+    def __init_subclass__(cls, retries=3, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._retries = retries
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._has_started = False
+
+    def started(self):
+        self._has_started = True
+
+    def retry(self, *, logger):
+        if not self._has_started and self._retries:
+            self._retries -= 1
+            return True
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -57,7 +79,7 @@ class Target(Action, commands=["/tar {target}", "/say Hail, %t"]):
 
 
 @attr.s(frozen=True, auto_attribs=True)
-class CastSpell(Action, commands=["/cast {spell[gem]}"]):
+class CastSpell(Action, Retryable, commands=["/cast {spell[gem]}"]):
 
     target: str
     spell: Spell
@@ -66,10 +88,17 @@ class CastSpell(Action, commands=["/cast {spell[gem]}"]):
         logger(f"Buffing {self.target} with {self.spell.name}.")
 
     def check(self, event) -> typing.Optional[Result]:
+        if self._check_started(event):
+            self.started()
+
         if ok := self._check(event):
             return Result(ok=ok, pause=datetime.timedelta(seconds=2))
-
         return None
+
+    def _check_started(self, event):
+        if isinstance(event, events.SpellCast):
+            if event.source.lower() == "you" and event.spell == self.spell.name:
+                return True
 
     def _check(self, event):
         # If we get a blocked spell message, and that spell is the spell

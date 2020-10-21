@@ -137,7 +137,14 @@ class BuffBot:
             self._current_action is not None
             and (datetime.now() - self._current_action[0]).total_seconds() > 15
         ):
-            self._current_action = None
+            # If we've reached the timeout, then we'll go ahead and ask the action
+            # if we should retry, and if we should then we'll retry, and if we should
+            # not, then we'll clear out our current action and move on.
+            if self._current_action[1].retry(logger=self.logger):
+                self._current_action = datetime.now(), self._current_action[1]
+                self._current_action[1].do(logger=self.logger)
+            else:
+                self._current_action = None
 
         # If we've been marked to pause, then we're going to stop processing at this
         # point, unlesss we've gone past our pause until point.
