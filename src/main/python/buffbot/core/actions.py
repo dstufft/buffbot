@@ -78,7 +78,7 @@ class Target(Action, commands=["/tar {target}", "/say Hail, %t"]):
         return []
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(auto_attribs=True)
 class CastSpell(Action, Retryable, commands=["/cast {spell[gem]}"]):
 
     target: str
